@@ -11,6 +11,7 @@ import io.swagger.annotations.ApiParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
@@ -45,6 +46,24 @@ public class OrderMasterController {
             return ResultResponse.fail(map);
         }
         return orderMasterService.insertOrder(orderMasterDto);
+    }
+
+    @RequestMapping("list")
+    @ApiOperation(value = "订单列表", httpMethod = "GET", response = ResultResponse.class)
+    public ResultResponse orderList(@RequestParam("openid") String openid, @RequestParam("page") Integer page, @RequestParam("size") Integer size){
+        return orderMasterService.orderList(openid,page,size);
+    }
+
+    @RequestMapping("detail")
+    @ApiOperation(value = "查询订单详情", httpMethod = "GET", response = ResultResponse.class)
+    public ResultResponse detail(@RequestParam("openid") String openid, @RequestParam("orderId") String orderId){
+        return orderMasterService.orderDetail(openid,orderId);
+    }
+
+    @RequestMapping("cancel")
+    @ApiOperation(value = "取消订单", httpMethod = "POST", response = ResultResponse.class)
+    public ResultResponse cancel(@RequestParam("openid") String openid, @RequestParam("orderId") String orderId){
+        return orderMasterService.orderCancel(openid,orderId);
     }
 
 }

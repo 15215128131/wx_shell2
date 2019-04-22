@@ -3,7 +3,9 @@ package com.xmcc.wx_shell.service.impl;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.xmcc.wx_shell.common.*;
+import com.xmcc.wx_shell.dao.AbstractBatchDao;
 import com.xmcc.wx_shell.dto.OrderDetailDto;
+import com.xmcc.wx_shell.dto.OrderMasterDetailDto;
 import com.xmcc.wx_shell.dto.OrderMasterDto;
 import com.xmcc.wx_shell.entity.OrderDetail;
 import com.xmcc.wx_shell.entity.OrderMaster;
@@ -16,19 +18,25 @@ import com.xmcc.wx_shell.service.ProductInfoService;
 import com.xmcc.wx_shell.utils.BigDecimalUtil;
 import com.xmcc.wx_shell.utils.CustomException;
 import com.xmcc.wx_shell.utils.IDUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
  *  订单业务层开发
  */
 @Service
-public class OrderMasterServiceImpl implements OrderMasterService {
+public class OrderMasterServiceImpl extends AbstractBatchDao<OrderMaster> implements OrderMasterService {
 
     @Autowired
     private ProductInfoService productInfoService;
@@ -36,6 +44,8 @@ public class OrderMasterServiceImpl implements OrderMasterService {
     private OrderMasterRepository orderMasterRepository;
     @Autowired
     private OrderDetailService orderDetailService;
+    @Autowired
+    private OrderDetailRepository orderDetailRepository;
 
     /**
      *  订单业务开发
@@ -118,4 +128,97 @@ public class OrderMasterServiceImpl implements OrderMasterService {
         map.put("orderId", orderId);
         return ResultResponse.success(map);
     }
+
+    /**
+     * 订单列表开发
+     * @param openid
+     * @param page
+     * @param size
+     * @return
+     */
+    @Override
+    public ResultResponse orderList(String openid, Integer page, Integer size) {
+        //TODO：参数验证
+        if (StringUtils.isBlank(openid)){
+            throw new CustomException(ResultResponse.fail(OrderEnums.OPENID_ERROR.getMsg()).getMsg());
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<List<OrderMaster>> pageList = orderMasterRepository.findByBuyerOpenidIn(openid, pageable);
+
+        return ResultResponse.success(pageList);
+    }
+
+    /**
+     * 查询订单详情
+     * @param openid
+     * @param orderId
+     * @return
+     */
+    @Override
+    public ResultResponse orderDetail(String openid, String orderId) {
+        //TODO：参数验证2
+        if (StringUtils.isBlank(openid)){
+            throw new CustomException(ResultResponse.fail(OrderEnums.OPENID_ERROR.getMsg()).getMsg());
+        }
+        if (StringUtils.isBlank(orderId)){
+            throw new CustomException(ResultResponse.fail(OrderEnums.ORDER_ERROR.getMsg()).getMsg());
+        }
+
+        //查询出订单信息
+        Optional<OrderMaster> orderMasterOptional = orderMasterRepository.findById(orderId);
+        if (!orderMasterOptional.isPresent()){
+            return ResultResponse.fail(OrderEnums.ORDER_NOT_EXITS.getMsg());
+        }
+        OrderMasterDetailDto orderMasterDetailDto = OrderMasterDetailDto.build(orderMasterOptional.get());
+
+        //查询出对应的所有的订单项信息
+        List<OrderDetail> byOrderidIn = orderDetailRepository.findByOrderIdIn(orderId);
+
+        //将订单项信息装入订单信息
+        orderMasterDetailDto.setOrderDetailList(byOrderidIn);
+
+        return ResultResponse.success(orderMasterDetailDto);
+    }
+
+    /**
+     * 取消订单
+     * @param openid
+     * @param orderId
+     * @return
+     */
+    @Override
+    @Transactional
+    public ResultResponse orderCancel(String openid, String orderId) {
+        if (StringUtils.isBlank(openid)){
+            throw new CustomException(ResultResponse.fail(OrderEnums.OPENID_ERROR.getMsg()).getMsg());
+        }
+        if (StringUtils.isBlank(orderId)){
+            throw new CustomException(ResultResponse.fail(OrderEnums.ORDER_ERROR.getMsg()).getMsg());
+        }
+
+        //查看订单是否存在
+        Optional<OrderMaster> orderMasterOptional = orderMasterRepository.findById(orderId);
+        if (!orderMasterOptional.isPresent()){
+            return ResultResponse.fail(OrderEnums.ORDER_NOT_EXITS.getMsg());
+        }
+        List<OrderMaster> orderMasterList = orderMasterRepository.findByOrderIdAndOrderStatusIn(orderId, OrderEnums.NEW.getCode());
+        if (orderMasterList.size()==0){
+            return ResultResponse.fail(OrderEnums.FINSH_CANCEL.getMsg());
+        }
+
+        //先删除订单中的订单项
+//        orderDetailRepository.deleteByOrderId(orderId);
+        //删除订单（改变订单存在状态）
+        List<OrderMaster> collect = orderMasterList.stream()
+                .filter(orderMaster -> orderMaster.getOrderStatus()==OrderEnums.NEW.getCode())
+                .map(orderMaster -> {orderMaster.setOrderStatus(OrderEnums.CANCEL.getCode());return orderMaster;})
+                .collect(Collectors.toList());
+
+        super.batchInsert(collect);
+
+        return ResultResponse.success();
+    }
+
+
 }

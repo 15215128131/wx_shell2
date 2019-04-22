@@ -90,6 +90,13 @@
             <version>3.4</version>
         </dependency>
 
+        <!--微信支付SDK-->
+        <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-mp</artifactId>
+            <version>3.3.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>

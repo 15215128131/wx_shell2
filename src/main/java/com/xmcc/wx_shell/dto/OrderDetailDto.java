@@ -1,8 +1,10 @@
 package com.xmcc.wx_shell.dto;
 
+import com.xmcc.wx_shell.entity.OrderDetail;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import org.springframework.beans.BeanUtils;
 
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
@@ -20,5 +22,12 @@ public class OrderDetailDto implements Serializable {
     @Min(value = 1,message = "数量不能少于一件")
     @ApiModelProperty(value = "商品数量",dataType = "Integer")     //swagger 参数的描述信息
     private Integer productQuantity;
+
+    //转换成Dto
+    public static OrderDetailDto build(OrderDetail orderMaster){
+        OrderDetailDto dto = new OrderDetailDto();
+        BeanUtils.copyProperties(orderMaster, dto);
+        return dto;
+    }
 
 }

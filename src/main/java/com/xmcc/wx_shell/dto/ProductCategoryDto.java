@@ -27,6 +27,7 @@ public class ProductCategoryDto implements Serializable {
     //防止为null时被忽略
     public List<ProductInfoDto> productInfoDtoList;
 
+    //转换成Dto
     public static ProductCategoryDto build(ProductCategory productCategory){
         ProductCategoryDto dto = new ProductCategoryDto();
         BeanUtils.copyProperties(productCategory, dto);

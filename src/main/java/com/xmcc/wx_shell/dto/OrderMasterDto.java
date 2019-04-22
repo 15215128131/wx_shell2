@@ -1,9 +1,11 @@
 package com.xmcc.wx_shell.dto;
 
+import com.xmcc.wx_shell.entity.OrderMaster;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import org.hibernate.validator.constraints.Length;
+import org.springframework.beans.BeanUtils;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
@@ -36,5 +38,12 @@ public class OrderMasterDto implements Serializable {
     @Valid      //表示需要嵌套验证
     @ApiModelProperty(value = "订单项集合",dataType = "List")
     private List<OrderDetailDto> items;
+
+    //转换成Dto
+    public static OrderMasterDto build(OrderMaster orderMaster){
+        OrderMasterDto dto = new OrderMasterDto();
+        BeanUtils.copyProperties(orderMaster, dto);
+        return dto;
+    }
 
 }
